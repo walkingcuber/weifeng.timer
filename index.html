@@ -3,26 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>魔方計時器 - 專業修復版</title>
+    <title>魔方計時器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* 恢復截圖 064104 的深色圓角樣式 */
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #1e1e1e; color: #ffffff; touch-action: manipulation; -webkit-user-select: none; user-select: none; overflow: hidden; }
         .login-panel { background-color: #2c2c2c; border-radius: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 400px; padding: 2.5rem; }
         .login-input { background-color: #e8f0fe; color: #000; width: 100%; padding: 0.85rem; border-radius: 0.75rem; border: none; font-size: 1rem; }
-        .timer-display { font-family: 'Roboto Mono', monospace; font-size: 6rem; }
+        .timer-display { font-family: 'Roboto Mono', monospace; font-size: 6rem; transition: color 0.1s; }
         .hidden { display: none !important; }
         #login-btn { background-color: #007bff; border-radius: 0.75rem; transition: background-color 0.2s; }
         #login-btn:hover { background-color: #0056b3; }
-        .scramble-text { color: #facc15; font-size: 1.5rem; font-family: 'Roboto Mono', monospace; min-height: 3rem; }
+        .scramble-text { color: #facc15; font-size: 1.5rem; font-family: 'Roboto Mono', monospace; min-height: 4.5rem; line-height: 1.5; }
     </style>
 </head>
 <body>
 
-    <!-- 登入介面 (對應 064104 排版) -->
     <div id="login-container" class="flex items-center justify-center h-screen w-screen">
         <div class="login-panel text-center">
             <h1 class="text-3xl font-bold mb-8 text-white">登入計時器</h1>
@@ -35,22 +33,20 @@
         </div>
     </div>
 
-    <!-- 主程式介面 -->
     <div id="app-container" class="hidden flex flex-col h-screen w-screen p-4 relative">
         <div id="user-info" class="absolute top-4 right-4 text-sm text-gray-400">
             <span id="display-username"></span>
             <button id="logout-btn" class="ml-2 underline hover:text-white">登出</button>
         </div>
-        
+                
         <header class="w-full text-center py-8">
-            <div id="scramble" class="scramble-text p-2">載入打亂公式中...</div>
+            <div id="scramble" class="scramble-text p-2 max-w-2xl mx-auto">載入打亂公式中...</div>
         </header>
 
         <main class="flex-grow flex flex-col items-center justify-center">
             <div id="timer" class="timer-display font-bold">0.00</div>
-            <div id="hint" class="mt-4 text-gray-500 text-lg">按住空白鍵後放開開始</div>
-            
-            <!-- 最近五次成績 -->
+            <div id="hint" class="mt-4 text-gray-500 text-lg uppercase tracking-widest">Hold Space to Ready</div>
+                        
             <div class="mt-10 w-full max-w-xs">
                 <h3 class="text-gray-400 text-sm mb-2 text-center uppercase tracking-widest">Recent Sessions</h3>
                 <ul id="mini-history-list" class="space-y-2 text-3xl font-mono text-center text-gray-400"></ul>
@@ -63,7 +59,6 @@
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // 使用你提供的真實配置
         const firebaseConfig = {
             apiKey: "AIzaSyDI95sVUBAs3iDMQlF115qNxXd-DPkBMbg",
             authDomain: "weifengtimer.firebaseapp.com",
@@ -78,11 +73,11 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let running = false;
+        let isRunning = false;
+        let isReady = false;
         let startTime = 0;
-        let timerInterval = null;
+        let requestID;
 
-        // 1. 監聽登入狀態
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('display-username').textContent = user.email;
@@ -96,22 +91,19 @@
             }
         });
 
-        // 2. 登入按鈕事件
         document.getElementById('login-btn').onclick = async () => {
             const email = document.getElementById('username-input').value;
             const password = document.getElementById('password-input').value;
-            const errorP = document.getElementById('login-error');
-            errorP.textContent = "登入中...";
+            document.getElementById('login-error').textContent = "驗證中...";
             try {
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (e) {
-                errorP.textContent = "帳號或密碼錯誤，請確認後再試。";
+                document.getElementById('login-error').textContent = "密碼錯誤或使用者不存在";
             }
         };
 
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // 3. 打亂公式產生 (3x3)
         function generateScramble() {
             const moves = ["R", "L", "U", "D", "F", "B"];
             const mods = ["", "'", "2"];
@@ -126,41 +118,47 @@
             document.getElementById('scramble').textContent = scramble.join(" ");
         }
 
-        // 4. 計時功能
-        function updateDisplay() {
+        function tick() {
+            if (!isRunning) return;
             const now = Date.now();
-            const diff = (now - startTime) / 1000;
-            document.getElementById('timer').textContent = diff.toFixed(2);
+            document.getElementById('timer').textContent = ((now - startTime) / 1000).toFixed(2);
+            requestID = requestAnimationFrame(tick);
         }
 
-        window.onkeydown = async (e) => {
+        window.onkeydown = (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (running) {
-                    // 停止計時
-                    running = false;
-                    clearInterval(timerInterval);
+                if (e.repeat) return; // 防止長按空白鍵重複觸發
+
+                if (isRunning) {
+                    // 1. 停止計時
+                    isRunning = false;
+                    cancelAnimationFrame(requestID);
                     const finalTime = document.getElementById('timer').textContent;
-                    await saveResult(finalTime);
+                    saveResult(finalTime);
                     generateScramble();
-                    await loadHistory();
                 } else {
-                    // 開始計時
-                    document.getElementById('timer').style.color = "#4ade80"; // 變綠色表示準備好了
+                    // 2. 準備開始
+                    isReady = true;
+                    document.getElementById('timer').style.color = "#4ade80"; // 變綠
+                    document.getElementById('timer').textContent = "0.00";
                 }
             }
         };
 
         window.onkeyup = (e) => {
-            if (e.code === 'Space' && !running) {
-                running = true;
-                startTime = Date.now();
-                document.getElementById('timer').style.color = "#ffffff";
-                timerInterval = setInterval(updateDisplay, 10);
+            if (e.code === 'Space') {
+                if (isReady && !isRunning) {
+                    // 3. 正式開始跑秒
+                    isReady = false;
+                    isRunning = true;
+                    startTime = Date.now();
+                    document.getElementById('timer').style.color = "#ffffff";
+                    requestAnimationFrame(tick);
+                }
             }
         };
 
-        // 5. 資料庫讀寫
         async function saveResult(timeStr) {
             const user = auth.currentUser;
             if (!user) return;
@@ -169,20 +167,20 @@
                     time: parseFloat(timeStr),
                     date: new Date()
                 });
-            } catch (err) {
-                console.error("儲存失敗:", err);
-            }
+                await loadHistory();
+            } catch (err) { console.error(err); }
         }
 
         async function loadHistory() {
             const user = auth.currentUser;
             if (!user) return;
             const q = query(collection(db, "users", user.uid, "times"), orderBy("date", "desc"), limit(5));
-            const querySnapshot = await getDocs(q);
+            const snap = await getDocs(q);
             const list = document.getElementById('mini-history-list');
             list.innerHTML = "";
-            querySnapshot.forEach((doc) => {
+            snap.forEach((doc) => {
                 const li = document.createElement('li');
+                li.className = "hover:text-white transition-colors";
                 li.textContent = doc.data().time.toFixed(2);
                 list.appendChild(li);
             });

@@ -1,263 +1,453 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>魔方計時器 (加速修復版)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Noto Sans TC', sans-serif; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: background-color 0.3s, color 0.3s; overflow: hidden; }
-        /* 主題顏色定義 */
-        .theme-black { background-color: #111827; color: #f9fafb; }
-        .theme-white { background-color: #f3f4f6; color: #1f2937; }
-        .theme-blue { background-color: #1e3a8a; color: #eff6ff; }
-        .theme-mint { background-color: #f0fdfa; color: #0f766e; }
-        .theme-synthwave { background-color: #0c0a21; color: #e0e7ff; }
-
-        .theme-black .panel, .theme-black .login-panel { background-color: #1f2937; }
-        .theme-white .panel, .theme-white .login-panel { background-color: #ffffff; border: 1px solid #e5e7eb; }
-        .theme-blue .panel, .theme-blue .login-panel { background-color: #1e40af; }
-        .theme-mint .panel, .theme-mint .login-panel { background-color: #ccfbf1; }
-        .theme-synthwave .panel, .theme-synthwave .login-panel { background-color: #1e1b4b; }
-
-        .timer-display { font-family: 'Roboto Mono', monospace; transition: color 0.15s, font-size 0.3s; }
-        .timer-font-standard { font-size: 6rem; }
-        @media (min-width: 1024px) { .timer-font-standard { font-size: 7.5rem; } }
-        .timer-font-large { font-size: 8rem; }
-        @media (min-width: 1024px) { .timer-font-large { font-size: 9rem; } }
-
-        .scramble-text { font-family: 'Roboto Mono', monospace; transition: opacity 0.3s; min-height: 4rem; }
-        .scramble-hidden { opacity: 0; }
-        .hidden { display: none !important; }
-        
-        .login-input { background-color: #374151; border: 1px solid #4b5563; color: white; }
-        .theme-white .login-input { background-color: #fff; color: #000; border: 1px solid #ccc; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入計時器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Roboto Mono', monospace;
+      user-select: none;
+    }
+    .timer-display { 
+      font-size: 5rem;
+      transition: color 0.3s;
+    }
+    .timer-display.ready { color: #10b981; }
+    .timer-display.running { color: #3b82f6; }
+    @media (max-width: 640px) {
+      .timer-display { font-size: 3rem; }
+    }
+  </style>
 </head>
-<body class="theme-black">
+<body class="bg-gray-900 text-white min-h-screen">
 
-<!-- 登入介面 -->
-<div id="login-container" class="flex items-center justify-center h-screen w-screen">
-    <div class="login-panel w-full max-w-sm rounded-2xl shadow-xl p-8 text-center">
-        <h1 class="text-3xl font-bold mb-6">登入計時器</h1>
-        <div class="space-y-4">
-            <input type="text" id="username-input" placeholder="帳號" class="login-input w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <input type="password" id="password-input" placeholder="密碼" class="login-input w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <p id="login-error" class="text-red-500 h-6 mt-2 text-sm"></p>
-        <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition mt-4">登入</button>
-    </div>
+<!-- 登入畫面 -->
+<div id="authScreen" class="flex items-center justify-center min-h-screen">
+  <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-full">
+    <h1 class="text-3xl font-bold text-center mb-6">登入計時器</h1>
+    <input type="email" id="emailInput" placeholder="電子郵件" 
+           class="w-full p-4 mb-4 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <input type="password" id="passwordInput" placeholder="密碼" 
+           class="w-full p-4 mb-6 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-lg font-bold transition">
+      登入
+    </button>
+    <p id="authError" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+  </div>
 </div>
 
-<!-- 主程式介面 -->
-<div id="app-container" class="hidden flex-col h-screen w-screen p-4 relative">
-    <div id="user-info" class="absolute top-4 right-4 text-sm text-gray-400">
-        歡迎, <span id="display-username" class="font-semibold"></span>! 
-        <button id="logout-btn" class="ml-2 underline hover:text-white transition">登出</button>
+<!-- 主計時器畫面 -->
+<div id="timerScreen" class="hidden">
+  <!-- 頂部導航 -->
+  <div class="flex justify-between items-center p-4 bg-gray-800">
+    <div>
+      <span class="text-gray-400">歡迎, </span>
+      <span id="userEmail" class="text-blue-400"></span>
     </div>
+    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+      登出
+    </button>
+  </div>
 
-    <header class="w-full text-center py-4">
-        <div id="scramble" class="scramble-text text-lg md:text-2xl font-semibold p-2">載入中...</div>
-    </header>
+  <!-- 打亂公式顯示 -->
+  <div class="text-center mt-8">
+    <p id="scrambleDisplay" class="text-xl text-gray-400">載入打亂公式中...</p>
+  </div>
 
-    <main class="flex-grow flex flex-col md:flex-row items-center justify-around w-full max-w-7xl mx-auto">
-        <!-- 最近成績 -->
-        <div id="mini-history-panel" class="w-full md:w-1/4 text-center order-2 md:order-1 mt-4">
-            <h3 class="text-sm text-gray-400 mb-2">最近成績</h3>
-            <ul id="mini-history-list" class="space-y-1 text-xl font-mono"></ul>
-        </div>
+  <!-- 計時器主顯示 -->
+  <div class="flex flex-col items-center justify-center mt-12">
+    <div id="timerDisplay" class="timer-display font-bold">0.00</div>
+    <p id="timerHint" class="text-gray-500 mt-4">按住空白鍵開始</p>
+  </div>
 
-        <!-- 計時器主體 -->
-        <div class="w-full md:w-1/2 flex flex-col items-center justify-center order-1 md:order-2">
-            <div id="timer" class="timer-display font-bold select-none">0.00</div>
-            <div id="hint" class="mt-4 text-gray-400 text-lg h-6">Hold Space to Start</div>
-        </div>
+  <!-- 成績統計 -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-12 px-4">
+    <div class="bg-gray-800 p-4 rounded-lg text-center">
+      <p class="text-gray-400 text-sm">目前平均</p>
+      <p id="avgDisplay" class="text-2xl font-bold">-</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-lg text-center">
+      <p class="text-gray-400 text-sm">最佳成績</p>
+      <p id="bestDisplay" class="text-2xl font-bold text-green-400">-</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-lg text-center">
+      <p class="text-gray-400 text-sm">ao5</p>
+      <p id="ao5Display" class="text-2xl font-bold">-</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded-lg text-center">
+      <p class="text-gray-400 text-sm">ao12</p>
+      <p id="ao12Display" class="text-2xl font-bold">-</p>
+    </div>
+  </div>
 
-        <!-- 統計數據 -->
-        <div id="stats-panel" class="w-full md:w-1/4 text-center order-3">
-            <div class="grid grid-cols-2 gap-4">
-                <div><div class="text-sm text-gray-400">最佳</div><div id="best-time" class="text-xl font-mono">-</div></div>
-                <div><div class="text-sm text-gray-400">ao5</div><div id="ao5" class="text-xl font-mono">-</div></div>
-            </div>
-        </div>
-    </main>
+  <!-- 最近成績列表 -->
+  <div class="max-w-4xl mx-auto mt-8 px-4">
+    <h3 class="text-xl font-bold mb-4">最近成績</h3>
+    <div id="recentSessions" class="space-y-2">
+      <p class="text-gray-500">尚無成績</p>
+    </div>
+  </div>
 
-    <footer class="w-full h-24 flex items-center justify-center gap-4">
-        <button id="settings-btn" class="bg-gray-700 px-6 py-3 rounded-lg font-bold">設定</button>
-        <button id="clear-btn" class="bg-red-900 px-6 py-3 rounded-lg font-bold text-white">清除紀錄</button>
-    </footer>
+  <!-- 設定按鈕 -->
+  <button id="settingsBtn" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 p-4 rounded-full shadow-lg transition">
+    ⚙️
+  </button>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // 300 組帳號資料
-    const users = {
-        "weifeng001": "weifeng3614", "weifeng002": "weifeng8491", "weifeng003": "weifeng6130", "weifeng004": "weifeng8816", "weifeng005": "weifeng1834",
-        "weifeng150": "weifeng6771", "weifeng300": "weifeng5886" 
-        // ... (此處省略中間其餘帳號，實際使用時請保留你原本的清單)
-    };
+<!-- 設定面板 -->
+<div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div class="bg-gray-800 p-8 rounded-xl max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+    <h2 class="text-2xl font-bold mb-6">計時器設定</h2>
+    
+    <div class="mb-6">
+      <label class="block text-gray-400 mb-2">WCA 項目</label>
+      <select id="eventSelect" class="w-full p-3 bg-gray-700 rounded-lg">
+        <option value="333">3x3x3 方塊</option>
+        <option value="222">2x2x2 方塊</option>
+        <option value="444">4x4x4 方塊</option>
+        <option value="555">5x5x5 方塊</option>
+        <option value="minx">Megaminx</option>
+        <option value="pyram">Pyraminx</option>
+        <option value="skewb">Skewb</option>
+      </select>
+    </div>
 
-    const dom = {
-        loginContainer: document.getElementById('login-container'),
-        appContainer: document.getElementById('app-container'),
-        usernameInput: document.getElementById('username-input'),
-        passwordInput: document.getElementById('password-input'),
-        loginBtn: document.getElementById('login-btn'),
-        loginError: document.getElementById('login-error'),
-        displayUsername: document.getElementById('display-username'),
-        logoutBtn: document.getElementById('logout-btn'),
-        timer: document.getElementById('timer'),
-        scramble: document.getElementById('scramble'),
-        historyList: document.getElementById('mini-history-list'),
-        bestTime: document.getElementById('best-time'),
-        ao5: document.getElementById('ao5')
-    };
+    <div class="mb-6">
+      <label class="block text-gray-400 mb-2">主題顏色</label>
+      <select id="themeSelect" class="w-full p-3 bg-gray-700 rounded-lg">
+        <option value="dark">黑色</option>
+        <option value="light">白色</option>
+        <option value="blue">藍色</option>
+      </select>
+    </div>
 
-    // 狀態變數
-    let currentUser = null;
-    let isRunning = false;
-    let isReady = false;
-    let isHolding = false;
-    let startTime = 0;
-    let readyTimer = null;
-    let requestID = null;
-    let times = [];
+    <button id="closeSettings" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg transition">
+      完成
+    </button>
+  </div>
+</div>
 
-    // 初始化
-    const savedUser = sessionStorage.getItem('cubeTimerUser');
-    if (savedUser) { loginSuccess(savedUser); }
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    // 登入事件
-    dom.loginBtn.onclick = () => {
-        const u = dom.usernameInput.value;
-        const p = dom.passwordInput.value;
-        if (users[u] === p) {
-            sessionStorage.setItem('cubeTimerUser', u);
-            loginSuccess(u);
-        } else {
-            dom.loginError.textContent = "帳號或密碼錯誤";
-        }
-    };
+  // Firebase 配置 - 請替換成你的金鑰
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-    dom.logoutBtn.onclick = () => {
-        sessionStorage.removeItem('cubeTimerUser');
-        location.reload();
-    };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    function loginSuccess(user) {
-        currentUser = user;
-        dom.displayUsername.textContent = user;
-        dom.loginContainer.classList.add('hidden');
-        dom.appContainer.classList.remove('hidden');
-        dom.appContainer.classList.add('flex');
-        loadData();
-        generateScramble();
+  // UI 元素
+  const authScreen = document.getElementById('authScreen');
+  const timerScreen = document.getElementById('timerScreen');
+  const emailInput = document.getElementById('emailInput');
+  const passwordInput = document.getElementById('passwordInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authError = document.getElementById('authError');
+  const userEmail = document.getElementById('userEmail');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const scrambleDisplay = document.getElementById('scrambleDisplay');
+  const timerHint = document.getElementById('timerHint');
+  const recentSessions = document.getElementById('recentSessions');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsModal = document.getElementById('settingsModal');
+  const closeSettings = document.getElementById('closeSettings');
+  const eventSelect = document.getElementById('eventSelect');
+
+  // 計時器狀態
+  let timerState = 'idle'; // idle, ready, running, stopped
+  let startTime = 0;
+  let currentTime = 0;
+  let animationFrame = null;
+  let holdTimer = null;
+  let currentUser = null;
+  let currentScramble = '';
+  let currentEvent = '333';
+
+  // 打亂公式生成器
+  const scrambleGenerators = {
+    '222': () => generateScramble(['U', 'R', 'F'], 9),
+    '333': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B'], 20),
+    '444': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B', 'u', 'd', 'l', 'r', 'f', 'b'], 40),
+    '555': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B', 'u', 'd', 'l', 'r', 'f', 'b'], 60),
+    'minx': () => generateMegaminxScramble(),
+    'pyram': () => generateScramble(['U', 'L', 'R', 'B'], 11),
+    'skewb': () => generateScramble(['U', 'L', 'R', 'B'], 11)
+  };
+
+  function generateScramble(moves, length) {
+    let scramble = [];
+    let lastMove = '';
+    const modifiers = ['', "'", '2'];
+    
+    for (let i = 0; i < length; i++) {
+      let move;
+      do {
+        move = moves[Math.floor(Math.random() * moves.length)];
+      } while (move === lastMove || move.toLowerCase() === lastMove.toLowerCase());
+      
+      const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+      scramble.push(move + modifier);
+      lastMove = move;
+    }
+    return scramble.join(' ');
+  }
+
+  function generateMegaminxScramble() {
+    let scramble = [];
+    for (let i = 0; i < 7; i++) {
+      let moves = [];
+      for (let j = 0; j < 10; j++) {
+        const r = Math.random() < 0.5 ? "R++" : "R--";
+        const d = Math.random() < 0.5 ? "D++" : "D--";
+        moves.push(r, d);
+      }
+      moves.push("U" + (Math.random() < 0.5 ? "'" : ""));
+      scramble.push(moves.join(' '));
+    }
+    return scramble.join('\n');
+  }
+
+  function newScramble() {
+    currentScramble = scrambleGenerators[currentEvent]();
+    scrambleDisplay.textContent = currentScramble;
+  }
+
+  // 登入處理
+  loginBtn.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    
+    if (!email || !password) {
+      showError('請輸入電子郵件和密碼');
+      return;
     }
 
-    // --- 核心計時邏輯 ---
-    window.onkeydown = (e) => {
-        if (e.code !== 'Space') return;
-        e.preventDefault();
-        if (e.repeat) return;
-
-        if (isRunning) {
-            stopTimer();
-        } else if (!isHolding) {
-            isHolding = true;
-            dom.timer.style.color = "#f59e0b"; // 橘色 (準備中)
-            readyTimer = setTimeout(() => {
-                isReady = true;
-                dom.timer.style.color = "#4ade80"; // 綠色 (就緒)
-            }, 300);
-        }
-    };
-
-    window.onkeyup = (e) => {
-        if (e.code !== 'Space') return;
-        isHolding = false;
-        clearTimeout(readyTimer);
-
-        if (isReady && !isRunning) {
-            startTimer();
-        } else {
-            dom.timer.style.color = "";
-        }
-    };
-
-    function startTimer() {
-        isRunning = true;
-        isReady = false;
-        startTime = Date.now();
-        dom.scramble.classList.add('scramble-hidden');
-        dom.timer.style.color = "";
-        requestID = requestAnimationFrame(updateUI);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      showError('登入失敗：' + error.message);
     }
+  });
 
-    function stopTimer() {
-        isRunning = false;
-        cancelAnimationFrame(requestID);
-        const final = ((Date.now() - startTime) / 1000).toFixed(2);
-        dom.timer.textContent = final;
-        dom.scramble.classList.remove('scramble-hidden');
-        
-        times.unshift(parseFloat(final));
-        saveData();
-        updateStats();
-        generateScramble();
+  function showError(message) {
+    authError.textContent = message;
+    authError.classList.remove('hidden');
+    setTimeout(() => authError.classList.add('hidden'), 3000);
+  }
+
+  // 登出處理
+  logoutBtn.addEventListener('click', () => signOut(auth));
+
+  // 監聽認證狀態
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      userEmail.textContent = user.email;
+      authScreen.classList.add('hidden');
+      timerScreen.classList.remove('hidden');
+      newScramble();
+      await loadRecentSessions();
+    } else {
+      currentUser = null;
+      authScreen.classList.remove('hidden');
+      timerScreen.classList.add('hidden');
     }
+  });
 
-    function updateUI() {
-        if (!isRunning) return;
-        dom.timer.textContent = ((Date.now() - startTime) / 1000).toFixed(2);
-        requestID = requestAnimationFrame(updateUI);
+  // 計時器邏輯
+  function updateDisplay() {
+    const elapsed = (currentTime - startTime) / 1000;
+    timerDisplay.textContent = elapsed.toFixed(2);
+    
+    if (timerState === 'running') {
+      currentTime = Date.now();
+      animationFrame = requestAnimationFrame(updateDisplay);
     }
+  }
 
-    // 打亂與統計
-    function generateScramble() {
-        const m = ["R", "L", "U", "D", "F", "B"];
-        const s = ["", "'", "2"];
-        let res = [];
-        let last = "";
-        for(let i=0; i<20; i++) {
-            let move;
-            do { move = m[Math.floor(Math.random()*6)]; } while(move === last);
-            last = move;
-            res.push(move + s[Math.floor(Math.random()*3)]);
-        }
-        dom.scramble.textContent = res.join(" ");
+  function startTimer() {
+    if (timerState !== 'ready') return;
+    
+    timerState = 'running';
+    startTime = Date.now();
+    currentTime = startTime;
+    timerDisplay.classList.remove('ready');
+    timerDisplay.classList.add('running');
+    timerHint.textContent = '計時中...';
+    updateDisplay();
+  }
+
+  function stopTimer() {
+    if (timerState !== 'running') return;
+    
+    timerState = 'stopped';
+    cancelAnimationFrame(animationFrame);
+    timerDisplay.classList.remove('running');
+    timerHint.textContent = '已停止';
+    
+    const finalTime = ((currentTime - startTime) / 1000).toFixed(2);
+    saveSession(parseFloat(finalTime));
+  }
+
+  function resetTimer() {
+    timerState = 'idle';
+    timerDisplay.textContent = '0.00';
+    timerDisplay.classList.remove('ready', 'running');
+    timerHint.textContent = '按住空白鍵開始';
+    newScramble();
+  }
+
+  // 鍵盤事件
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || !currentUser) return;
+    e.preventDefault();
+    
+    if (timerState === 'idle') {
+      holdTimer = setTimeout(() => {
+        timerState = 'ready';
+        timerDisplay.classList.add('ready');
+        timerHint.textContent = '放開開始';
+      }, 300);
+    } else if (timerState === 'running') {
+      stopTimer();
     }
+  });
 
-    function updateStats() {
-        dom.historyList.innerHTML = times.slice(0, 5).map(t => `<li>${t.toFixed(2)}</li>`).join("");
-        if (times.length > 0) dom.bestTime.textContent = Math.min(...times).toFixed(2);
-        if (times.length >= 5) {
-            const last5 = times.slice(0, 5).sort((a,b) => a-b);
-            const avg = (last5[1] + last5[2] + last5[3]) / 3;
-            dom.ao5.textContent = avg.toFixed(2);
-        }
-    }
-
-    function saveData() {
-        localStorage.setItem(`times_${currentUser}`, JSON.stringify(times));
-    }
-
-    function loadData() {
-        times = JSON.parse(localStorage.getItem(`times_${currentUser}`)) || [];
-        updateStats();
+  document.addEventListener('keyup', (e) => {
+    if (e.code !== 'Space' || !currentUser) return;
+    e.preventDefault();
+    
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
     }
     
-    document.getElementById('clear-btn').onclick = () => {
-        if(confirm("確定要清除所有紀錄嗎？")) {
-            times = [];
-            saveData();
-            updateStats();
-            dom.timer.textContent = "0.00";
-        }
+    if (timerState === 'ready') {
+      startTimer();
+    } else if (timerState === 'stopped') {
+      resetTimer();
+    } else if (timerState === 'idle' && holdTimer === null) {
+      // 防止誤觸
+    }
+  });
+
+  // 儲存成績
+  async function saveSession(time) {
+    if (!currentUser) return;
+    
+    const sessionData = {
+      time: time,
+      scramble: currentScramble,
+      event: currentEvent,
+      timestamp: Date.now(),
+      date: new Date().toISOString()
     };
-});
+
+    try {
+      const sessionRef = doc(collection(db, `users/${currentUser.uid}/sessions`));
+      await setDoc(sessionRef, sessionData);
+      await loadRecentSessions();
+    } catch (error) {
+      console.error('儲存失敗:', error);
+    }
+  }
+
+  // 載入最近成績
+  async function loadRecentSessions() {
+    if (!currentUser) return;
+    
+    try {
+      const q = query(
+        collection(db, `users/${currentUser.uid}/sessions`),
+        orderBy('timestamp', 'desc'),
+        limit(10)
+      );
+      
+      const snapshot = await getDocs(q);
+      const sessions = [];
+      
+      snapshot.forEach(doc => {
+        sessions.push(doc.data());
+      });
+      
+      displaySessions(sessions);
+      calculateStats(sessions);
+    } catch (error) {
+      console.error('載入失敗:', error);
+    }
+  }
+
+  function displaySessions(sessions) {
+    if (sessions.length === 0) {
+      recentSessions.innerHTML = '<p class="text-gray-500">尚無成績</p>';
+      return;
+    }
+    
+    recentSessions.innerHTML = sessions.map((s, i) => `
+      <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center">
+        <span class="text-gray-400">#${i + 1}</span>
+        <span class="text-2xl font-bold">${s.time.toFixed(2)}</span>
+        <span class="text-gray-500 text-sm">${new Date(s.timestamp).toLocaleTimeString()}</span>
+      </div>
+    `).join('');
+  }
+
+  function calculateStats(sessions) {
+    if (sessions.length === 0) return;
+    
+    const times = sessions.map(s => s.time);
+    const avg = (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2);
+    const best = Math.min(...times).toFixed(2);
+    
+    document.getElementById('avgDisplay').textContent = avg;
+    document.getElementById('bestDisplay').textContent = best;
+    
+    if (times.length >= 5) {
+      const ao5 = calculateAverage(times.slice(0, 5));
+      document.getElementById('ao5Display').textContent = ao5.toFixed(2);
+    }
+    
+    if (times.length >= 12) {
+      const ao12 = calculateAverage(times.slice(0, 12));
+      document.getElementById('ao12Display').textContent = ao12.toFixed(2);
+    }
+  }
+
+  function calculateAverage(times) {
+    const sorted = [...times].sort((a, b) => a - b);
+    const trimmed = sorted.slice(1, -1);
+    return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+  }
+
+  // 設定面板
+  settingsBtn.addEventListener('click', () => {
+    settingsModal.classList.remove('hidden');
+  });
+
+  closeSettings.addEventListener('click', () => {
+    settingsModal.classList.add('hidden');
+  });
+
+  eventSelect.addEventListener('change', (e) => {
+    currentEvent = e.target.value;
+    newScramble();
+  });
 </script>
+
 </body>
 </html>

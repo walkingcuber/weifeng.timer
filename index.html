@@ -3,57 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>魔方計時器 - 專業修復版</title>
+    <title>魔方計時器 - 最終修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* 恢復原本純真的 CSS 樣式 */
-        body { font-family: 'Noto Sans TC', sans-serif; touch-action: manipulation; -webkit-user-select: none; user-select: none; transition: background-color 0.3s, color 0.3s; overflow: hidden; }
-        .theme-black { background-color: #111827; color: #f9fafb; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #111827; color: #f9fafb; touch-action: manipulation; -webkit-user-select: none; user-select: none; overflow: hidden; }
         .login-panel { background-color: #1f2937; border-radius: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .timer-display { font-family: 'Roboto Mono', monospace; font-size: 6rem; }
-        .login-input { background-color: #374151; border: 1px solid #4b5563; color: white; }
+        .login-input { background-color: #374151; border: 1px solid #4b5563; color: white; width: 100%; padding: 1rem; border-radius: 0.75rem; }
         .hidden { display: none !important; }
     </style>
 </head>
-<body class="theme-black">
+<body>
 
     <div id="login-container" class="flex items-center justify-center h-screen w-screen">
         <div class="login-panel w-full max-w-sm p-8 text-center">
             <h1 class="text-3xl font-bold mb-8 text-white">登入計時器</h1>
             <div class="space-y-4">
-                <input type="text" id="username-input" placeholder="帳號" class="login-input w-full p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="password" id="password-input" placeholder="密碼" class="login-input w-full p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="username-input" placeholder="帳號" class="login-input focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="password-input" placeholder="密碼" class="login-input focus:ring-2 focus:ring-blue-500">
             </div>
             <p id="login-error" class="text-red-500 h-6 mt-2 text-sm"></p>
-            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition mt-6 text-lg">登入</button>
+            <button id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition mt-6 text-lg">登入</button>
         </div>
     </div>
 
-    <div id="app-container" class="hidden flex-col h-screen w-screen p-4 relative">
+    <div id="app-container" class="hidden flex flex-col h-screen w-screen p-4 relative">
         <div id="user-info" class="absolute top-4 right-4 text-sm text-gray-400">
             歡迎, <span id="display-username" class="font-semibold"></span>! 
             <button id="logout-btn" class="ml-2 underline hover:text-white transition">登出</button>
         </div>
-        <header class="w-full text-center py-4">
-            <div id="scramble" class="text-yellow-400 text-xl font-mono p-2">載入中...</div>
+        <header class="w-full text-center py-8">
+            <div id="scramble" class="text-yellow-400 text-2xl font-mono p-2">載入打亂公式...</div>
         </header>
         <main class="flex-grow flex flex-col items-center justify-center">
-            <div id="timer" class="timer-display font-bold select-none">0.00</div>
-            <div id="hint" class="mt-4 text-gray-400 text-lg">按住空白鍵開始</div>
-            <ul id="mini-history-list" class="mt-8 space-y-2 text-2xl font-mono text-gray-300"></ul>
+            <div id="timer" class="timer-display font-bold">0.00</div>
+            <div id="hint" class="mt-4 text-gray-500 text-lg">按住空白鍵開始</div>
+            <ul id="mini-history-list" class="mt-12 space-y-2 text-3xl font-mono text-gray-400"></ul>
         </main>
     </div>
 
     <script type="module">
-        // 引入 Firebase 模組
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // Firebase 配置
+        // Firebase 配置 (請在此填入你的真實資料)
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -71,20 +68,21 @@
         let startTime = 0;
         let times = [];
 
-        // 登入邏輯
+        // 1. 認證監聽 (整合 auth.js)
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 document.getElementById('display-username').textContent = user.email;
                 document.getElementById('login-container').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
-                await loadFirebaseTimes(user.uid);
-                updateScramble();
+                await loadTimes();
+                nextScramble();
             } else {
                 document.getElementById('login-container').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
             }
         });
 
+        // 2. 登入/登出 (整合 auth.js)
         document.getElementById('login-btn').onclick = async () => {
             const email = document.getElementById('username-input').value;
             const password = document.getElementById('password-input').value;
@@ -94,22 +92,24 @@
                 document.getElementById('login-error').textContent = "帳號或密碼錯誤";
             }
         };
-
         document.getElementById('logout-btn').onclick = () => signOut(auth);
 
-        // 計時器邏輯
-        function updateScramble() {
+        // 3. 打亂公式 (整合 scramble.js)
+        function nextScramble() {
             const moves = ["R","L","U","D","F","B"];
             const mods = ["", "'", "2"];
-            let res = [];
+            let res = [], last = "";
             for (let i = 0; i < 20; i++) {
-                let m = moves[Math.floor(Math.random() * moves.length)];
+                let m;
+                do { m = moves[Math.floor(Math.random() * moves.length)]; } while (m === last);
+                last = m;
                 res.push(m + mods[Math.floor(Math.random() * 3)]);
             }
             document.getElementById('scramble').textContent = res.join(" ");
         }
 
-        async function saveTimeToFirebase(t) {
+        // 4. 資料儲存 (整合 storage.js)
+        async function saveTime(t) {
             const user = auth.currentUser;
             if (user) {
                 await addDoc(collection(db, "users", user.uid, "3x3"), {
@@ -119,8 +119,10 @@
             }
         }
 
-        async function loadFirebaseTimes(uid) {
-            const q = query(collection(db, "users", uid, "3x3"), orderBy("createdAt", "desc"), limit(5));
+        async function loadTimes() {
+            const user = auth.currentUser;
+            if (!user) return;
+            const q = query(collection(db, "users", user.uid, "3x3"), orderBy("createdAt", "desc"), limit(5));
             const snap = await getDocs(q);
             times = snap.docs.map(d => d.data());
             renderHistory();
@@ -131,23 +133,26 @@
             ul.innerHTML = times.map(t => `<li>${(t.time/1000).toFixed(2)}</li>`).join('');
         }
 
+        // 5. 計時控制 (整合 timer.js)
+        function tick() {
+            if (!running) return;
+            document.getElementById('timer').textContent = ((Date.now() - startTime)/1000).toFixed(2);
+            requestAnimationFrame(tick);
+        }
+
         window.onkeydown = async (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 if (running) {
                     running = false;
                     const elapsed = Date.now() - startTime;
-                    await saveTimeToFirebase(elapsed);
-                    await loadFirebaseTimes(auth.currentUser.uid);
-                    updateScramble();
+                    await saveTime(elapsed);
+                    await loadTimes();
+                    nextScramble();
                 } else {
                     running = true;
                     startTime = Date.now();
-                    requestAnimationFrame(function tick() {
-                        if (!running) return;
-                        document.getElementById('timer').textContent = ((Date.now() - startTime)/1000).toFixed(2);
-                        requestAnimationFrame(tick);
-                    });
+                    tick();
                 }
             }
         };

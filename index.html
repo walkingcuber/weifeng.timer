@@ -2,453 +2,334 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>登入計時器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>專業魔方計時器</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body { 
-      font-family: 'Roboto Mono', monospace;
+      font-family: 'Roboto Mono', 'Noto Sans TC', monospace;
       user-select: none;
+      transition: background-color 0.3s;
     }
     .timer-display { 
-      font-size: 5rem;
-      transition: color 0.3s;
+      font-size: 6rem;
+      transition: color 0.1s;
     }
     .timer-display.ready { color: #10b981; }
     .timer-display.running { color: #3b82f6; }
     @media (max-width: 640px) {
-      .timer-display { font-size: 3rem; }
+      .timer-display { font-size: 4rem; }
     }
+    /* 主題定義 */
+    .theme-dark { background-color: #111827; color: white; }
+    .theme-light { background-color: #f3f4f6; color: #1f2937; }
+    .theme-blue { background-color: #1e3a8a; color: white; }
+    
+    .panel { background-color: rgba(31, 41, 55, 0.8); }
+    .theme-light .panel { background-color: white; border: 1px solid #e5e7eb; }
   </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="theme-dark min-h-screen">
 
-<!-- 登入畫面 -->
-<div id="authScreen" class="flex items-center justify-center min-h-screen">
-  <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-full">
+<div id="authScreen" class="flex items-center justify-center min-h-screen p-4">
+  <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-full panel">
     <h1 class="text-3xl font-bold text-center mb-6">登入計時器</h1>
-    <input type="email" id="emailInput" placeholder="電子郵件" 
-           class="w-full p-4 mb-4 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <input type="text" id="usernameInput" placeholder="帳號" 
+           class="w-full p-4 mb-4 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
     <input type="password" id="passwordInput" placeholder="密碼" 
-           class="w-full p-4 mb-6 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-    <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-lg font-bold transition">
+           class="w-full p-4 mb-6 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <button id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg font-bold transition">
       登入
     </button>
     <p id="authError" class="text-red-500 text-sm mt-4 text-center hidden"></p>
   </div>
 </div>
 
-<!-- 主計時器畫面 -->
 <div id="timerScreen" class="hidden">
-  <!-- 頂部導航 -->
-  <div class="flex justify-between items-center p-4 bg-gray-800">
+  <div class="flex justify-between items-center p-4 bg-gray-800 panel">
     <div>
-      <span class="text-gray-400">歡迎, </span>
-      <span id="userEmail" class="text-blue-400"></span>
+      <span class="opacity-60 text-sm">歡迎, </span>
+      <span id="displayUser" class="text-blue-400 font-bold"></span>
     </div>
-    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition">
+    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">
       登出
     </button>
   </div>
 
-  <!-- 打亂公式顯示 -->
-  <div class="text-center mt-8">
-    <p id="scrambleDisplay" class="text-xl text-gray-400">載入打亂公式中...</p>
+  <div class="text-center mt-8 px-4">
+    <p id="scrambleDisplay" class="text-xl md:text-2xl font-bold tracking-wide text-yellow-400"></p>
   </div>
 
-  <!-- 計時器主顯示 -->
-  <div class="flex flex-col items-center justify-center mt-12">
+  <div class="flex flex-col items-center justify-center mt-12 mb-12">
     <div id="timerDisplay" class="timer-display font-bold">0.00</div>
     <p id="timerHint" class="text-gray-500 mt-4">按住空白鍵開始</p>
   </div>
 
-  <!-- 成績統計 -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-12 px-4">
-    <div class="bg-gray-800 p-4 rounded-lg text-center">
-      <p class="text-gray-400 text-sm">目前平均</p>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto px-4">
+    <div class="bg-gray-800 p-4 rounded-lg text-center panel">
+      <p class="opacity-60 text-xs uppercase">目前平均</p>
       <p id="avgDisplay" class="text-2xl font-bold">-</p>
     </div>
-    <div class="bg-gray-800 p-4 rounded-lg text-center">
-      <p class="text-gray-400 text-sm">最佳成績</p>
-      <p id="bestDisplay" class="text-2xl font-bold text-green-400">-</p>
+    <div class="bg-gray-800 p-4 rounded-lg text-center panel">
+      <p class="opacity-60 text-xs uppercase text-green-400">最佳成績</p>
+      <p id="bestDisplay" class="text-2xl font-bold">-.--</p>
     </div>
-    <div class="bg-gray-800 p-4 rounded-lg text-center">
-      <p class="text-gray-400 text-sm">ao5</p>
+    <div class="bg-gray-800 p-4 rounded-lg text-center panel">
+      <p class="opacity-60 text-xs uppercase">ao5</p>
       <p id="ao5Display" class="text-2xl font-bold">-</p>
     </div>
-    <div class="bg-gray-800 p-4 rounded-lg text-center">
-      <p class="text-gray-400 text-sm">ao12</p>
+    <div class="bg-gray-800 p-4 rounded-lg text-center panel">
+      <p class="opacity-60 text-xs uppercase">ao12</p>
       <p id="ao12Display" class="text-2xl font-bold">-</p>
     </div>
   </div>
 
-  <!-- 最近成績列表 -->
-  <div class="max-w-4xl mx-auto mt-8 px-4">
-    <h3 class="text-xl font-bold mb-4">最近成績</h3>
-    <div id="recentSessions" class="space-y-2">
-      <p class="text-gray-500">尚無成績</p>
+  <div class="max-w-4xl mx-auto mt-10 px-4 pb-20">
+    <div class="flex justify-between items-end mb-4">
+        <h3 class="text-xl font-bold">最近成績</h3>
+        <button id="clearHistoryBtn" class="text-gray-500 hover:text-red-400 text-sm underline">清除紀錄</button>
     </div>
+    <div id="recentSessions" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      </div>
   </div>
 
-  <!-- 設定按鈕 -->
-  <button id="settingsBtn" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 p-4 rounded-full shadow-lg transition">
+  <button id="settingsBtn" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition z-10">
     ⚙️
   </button>
 </div>
 
-<!-- 設定面板 -->
-<div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-  <div class="bg-gray-800 p-8 rounded-xl max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+<div id="settingsModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+  <div class="bg-gray-800 p-8 rounded-xl max-w-md w-full panel">
     <h2 class="text-2xl font-bold mb-6">計時器設定</h2>
     
     <div class="mb-6">
-      <label class="block text-gray-400 mb-2">WCA 項目</label>
-      <select id="eventSelect" class="w-full p-3 bg-gray-700 rounded-lg">
-        <option value="333">3x3x3 方塊</option>
-        <option value="222">2x2x2 方塊</option>
-        <option value="444">4x4x4 方塊</option>
-        <option value="555">5x5x5 方塊</option>
-        <option value="minx">Megaminx</option>
-        <option value="pyram">Pyraminx</option>
+      <label class="block opacity-60 mb-2">WCA 項目</label>
+      <select id="eventSelect" class="w-full p-3 bg-gray-700 rounded-lg text-white">
+        <option value="3x3">3x3x3 方塊</option>
+        <option value="2x2">2x2x2 方塊</option>
+        <option value="4x4">4x4x4 方塊</option>
+        <option value="5x5">5x5x5 方塊</option>
+        <option value="pyraminx">Pyraminx</option>
         <option value="skewb">Skewb</option>
+        <option value="megaminx">Megaminx</option>
       </select>
     </div>
 
-    <div class="mb-6">
-      <label class="block text-gray-400 mb-2">主題顏色</label>
-      <select id="themeSelect" class="w-full p-3 bg-gray-700 rounded-lg">
-        <option value="dark">黑色</option>
-        <option value="light">白色</option>
-        <option value="blue">藍色</option>
-      </select>
+    <div class="mb-8">
+      <label class="block opacity-60 mb-2">主題配色</label>
+      <div class="flex gap-2">
+        <button onclick="changeTheme('dark')" class="flex-1 p-2 bg-gray-900 border border-gray-600 rounded">深色</button>
+        <button onclick="changeTheme('light')" class="flex-1 p-2 bg-gray-100 text-black rounded">淺色</button>
+        <button onclick="changeTheme('blue')" class="flex-1 p-2 bg-blue-900 rounded">藍色</button>
+      </div>
     </div>
 
-    <button id="closeSettings" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-lg transition">
-      完成
+    <button id="closeSettings" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold">
+      完成返回
     </button>
   </div>
 </div>
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-  // Firebase 配置 - 請替換成你的金鑰
-  const firebaseConfig = {
-    apiKey: "AIzaSyDI95sVUBAs3iDMQlF115qNxXd-DPkBMbg",
-    authDomain: "weifengtimer.firebaseapp.com",
-    projectId: "weifengtimer",
-    storageBucket: "weifengtimer.firebasestorage.app",
-    messagingSenderId: "859708136196",
-    appId: "1:859708136196:web:47386850f3df3e9858ce51",
-    measurementId: "G-N8JFJ1E4WB"
+<script>
+  // --- 300 組用戶資料庫 (保留改良版的核心) ---
+  const users = {
+    "weifeng001": "weifeng3614", "weifeng002": "weifeng8491", "weifeng003": "weifeng6130", // ...(此處省略其餘，請保留您原始代碼中的300組)
+    "weifeng300": "weifeng5886"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  // UI 元素
-  const authScreen = document.getElementById('authScreen');
-  const timerScreen = document.getElementById('timerScreen');
-  const emailInput = document.getElementById('emailInput');
-  const passwordInput = document.getElementById('passwordInput');
-  const loginBtn = document.getElementById('loginBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const authError = document.getElementById('authError');
-  const userEmail = document.getElementById('userEmail');
-  const timerDisplay = document.getElementById('timerDisplay');
-  const scrambleDisplay = document.getElementById('scrambleDisplay');
-  const timerHint = document.getElementById('timerHint');
-  const recentSessions = document.getElementById('recentSessions');
-  const settingsBtn = document.getElementById('settingsBtn');
-  const settingsModal = document.getElementById('settingsModal');
-  const closeSettings = document.getElementById('closeSettings');
-  const eventSelect = document.getElementById('eventSelect');
-
-  // 計時器狀態
-  let timerState = 'idle'; // idle, ready, running, stopped
+  // 狀態變數
+  let currentUser = null;
+  let timerState = 'idle'; // idle, ready, running
   let startTime = 0;
   let currentTime = 0;
   let animationFrame = null;
+  let times = [];
+  let currentEvent = '3x3';
   let holdTimer = null;
-  let currentUser = null;
-  let currentScramble = '';
-  let currentEvent = '333';
 
-  // 打亂公式生成器
-  const scrambleGenerators = {
-    '222': () => generateScramble(['U', 'R', 'F'], 9),
-    '333': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B'], 20),
-    '444': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B', 'u', 'd', 'l', 'r', 'f', 'b'], 40),
-    '555': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B', 'u', 'd', 'l', 'r', 'f', 'b'], 60),
-    'minx': () => generateMegaminxScramble(),
-    'pyram': () => generateScramble(['U', 'L', 'R', 'B'], 11),
-    'skewb': () => generateScramble(['U', 'L', 'R', 'B'], 11)
-  };
+  // DOM 元素
+  const authScreen = document.getElementById('authScreen');
+  const timerScreen = document.getElementById('timerScreen');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const scrambleDisplay = document.getElementById('scrambleDisplay');
+  const displayUser = document.getElementById('displayUser');
+  const authError = document.getElementById('authError');
 
-  function generateScramble(moves, length) {
-    let scramble = [];
-    let lastMove = '';
-    const modifiers = ['', "'", '2'];
-    
-    for (let i = 0; i < length; i++) {
-      let move;
-      do {
-        move = moves[Math.floor(Math.random() * moves.length)];
-      } while (move === lastMove || move.toLowerCase() === lastMove.toLowerCase());
-      
-      const modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
-      scramble.push(move + modifier);
-      lastMove = move;
-    }
-    return scramble.join(' ');
+  // --- 初始化功能 ---
+  function init() {
+    const saved = sessionStorage.getItem('cubeTimerUser');
+    if (saved) loginSuccess(saved);
+
+    document.getElementById('loginBtn').onclick = handleLogin;
+    document.getElementById('logoutBtn').onclick = handleLogout;
+    document.getElementById('settingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
+    document.getElementById('closeSettings').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
+    document.getElementById('eventSelect').onchange = (e) => {
+        currentEvent = e.target.value;
+        loadData();
+        newScramble();
+    };
+    document.getElementById('clearHistoryBtn').onclick = clearHistory;
   }
 
-  function generateMegaminxScramble() {
-    let scramble = [];
-    for (let i = 0; i < 7; i++) {
-      let moves = [];
-      for (let j = 0; j < 10; j++) {
-        const r = Math.random() < 0.5 ? "R++" : "R--";
-        const d = Math.random() < 0.5 ? "D++" : "D--";
-        moves.push(r, d);
-      }
-      moves.push("U" + (Math.random() < 0.5 ? "'" : ""));
-      scramble.push(moves.join(' '));
-    }
-    return scramble.join('\n');
-  }
-
-  function newScramble() {
-    currentScramble = scrambleGenerators[currentEvent]();
-    scrambleDisplay.textContent = currentScramble;
-  }
-
-  // 登入處理
-  loginBtn.addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    
-    if (!email || !password) {
-      showError('請輸入電子郵件和密碼');
-      return;
-    }
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      showError('登入失敗：' + error.message);
-    }
-  });
-
-  function showError(message) {
-    authError.textContent = message;
-    authError.classList.remove('hidden');
-    setTimeout(() => authError.classList.add('hidden'), 3000);
-  }
-
-  // 登出處理
-  logoutBtn.addEventListener('click', () => signOut(auth));
-
-  // 監聽認證狀態
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUser = user;
-      userEmail.textContent = user.email;
-      authScreen.classList.add('hidden');
-      timerScreen.classList.remove('hidden');
-      newScramble();
-      await loadRecentSessions();
+  // --- 登入邏輯 ---
+  function handleLogin() {
+    const u = document.getElementById('usernameInput').value;
+    const p = document.getElementById('passwordInput').value;
+    if (users[u] && users[u] === p) {
+      loginSuccess(u);
     } else {
-      currentUser = null;
-      authScreen.classList.remove('hidden');
-      timerScreen.classList.add('hidden');
+      authError.textContent = "帳號或密碼錯誤";
+      authError.classList.remove('hidden');
+    }
+  }
+
+  function loginSuccess(user) {
+    currentUser = user;
+    sessionStorage.setItem('cubeTimerUser', user);
+    displayUser.textContent = user;
+    authScreen.classList.add('hidden');
+    timerScreen.classList.remove('hidden');
+    loadData();
+    newScramble();
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('cubeTimerUser');
+    location.reload();
+  }
+
+  // --- 打亂公式生成 (WCA 簡化版) ---
+  function newScramble() {
+    const moves = {
+        '3x3': ['U','D','L','R','F','B'],
+        '2x2': ['U','R','F'],
+        'pyraminx': ['U','L','R','B'],
+        'skewb': ['U','L','R','B']
+    };
+    const currentMoves = moves[currentEvent] || moves['3x3'];
+    let scramble = [];
+    let last = "";
+    for(let i=0; i< (currentEvent==='2x2'?9:20); i++){
+        let m;
+        do { m = currentMoves[Math.floor(Math.random()*currentMoves.length)]; } while(m===last);
+        const mod = ["","'","2"][Math.floor(Math.random()*3)];
+        scramble.push(m + mod);
+        last = m;
+    }
+    scrambleDisplay.textContent = scramble.join(" ");
+  }
+
+  // --- 計時器核心邏輯 (原始版體驗) ---
+  function updateTimer() {
+    if (timerState === 'running') {
+        currentTime = Date.now();
+        const elapsed = (currentTime - startTime) / 1000;
+        timerDisplay.textContent = elapsed.toFixed(2);
+        animationFrame = requestAnimationFrame(updateTimer);
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' || currentUser === null) return;
+    if (document.activeElement.tagName === 'INPUT') return;
+    e.preventDefault();
+
+    if (timerState === 'running') {
+        stopTimer();
+    } else if (timerState === 'idle') {
+        timerState = 'ready';
+        timerDisplay.classList.add('ready');
     }
   });
 
-  // 計時器邏輯
-  function updateDisplay() {
-    const elapsed = (currentTime - startTime) / 1000;
-    timerDisplay.textContent = elapsed.toFixed(2);
-    
-    if (timerState === 'running') {
-      currentTime = Date.now();
-      animationFrame = requestAnimationFrame(updateDisplay);
+  window.addEventListener('keyup', (e) => {
+    if (e.code !== 'Space' || currentUser === null) return;
+    e.preventDefault();
+
+    if (timerState === 'ready') {
+        startTimer();
     }
-  }
+  });
 
   function startTimer() {
-    if (timerState !== 'ready') return;
-    
     timerState = 'running';
     startTime = Date.now();
-    currentTime = startTime;
     timerDisplay.classList.remove('ready');
     timerDisplay.classList.add('running');
-    timerHint.textContent = '計時中...';
-    updateDisplay();
+    updateTimer();
   }
 
   function stopTimer() {
-    if (timerState !== 'running') return;
-    
-    timerState = 'stopped';
-    cancelAnimationFrame(animationFrame);
-    timerDisplay.classList.remove('running');
-    timerHint.textContent = '已停止';
-    
-    const finalTime = ((currentTime - startTime) / 1000).toFixed(2);
-    saveSession(parseFloat(finalTime));
-  }
-
-  function resetTimer() {
     timerState = 'idle';
-    timerDisplay.textContent = '0.00';
-    timerDisplay.classList.remove('ready', 'running');
-    timerHint.textContent = '按住空白鍵開始';
+    timerDisplay.classList.remove('running');
+    const finalTime = parseFloat(((Date.now() - startTime) / 1000).toFixed(2));
+    saveTime(finalTime);
     newScramble();
   }
 
-  // 鍵盤事件
-  document.addEventListener('keydown', (e) => {
-    if (e.code !== 'Space' || !currentUser) return;
-    e.preventDefault();
-    
-    if (timerState === 'idle') {
-      holdTimer = setTimeout(() => {
-        timerState = 'ready';
-        timerDisplay.classList.add('ready');
-        timerHint.textContent = '放開開始';
-      }, 300);
-    } else if (timerState === 'running') {
-      stopTimer();
-    }
-  });
+  // --- 數據儲存 ---
+  function saveTime(time) {
+    times.unshift({ time, date: new Date().toLocaleTimeString() });
+    localStorage.setItem(`times_${currentUser}_${currentEvent}`, JSON.stringify(times));
+    updateUI();
+  }
 
-  document.addEventListener('keyup', (e) => {
-    if (e.code !== 'Space' || !currentUser) return;
-    e.preventDefault();
-    
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-    
-    if (timerState === 'ready') {
-      startTimer();
-    } else if (timerState === 'stopped') {
-      resetTimer();
-    } else if (timerState === 'idle' && holdTimer === null) {
-      // 防止誤觸
-    }
-  });
+  function loadData() {
+    const saved = localStorage.getItem(`times_${currentUser}_${currentEvent}`);
+    times = saved ? JSON.parse(saved) : [];
+    updateUI();
+  }
 
-  // 儲存成績
-  async function saveSession(time) {
-    if (!currentUser) return;
-    
-    const sessionData = {
-      time: time,
-      scramble: currentScramble,
-      event: currentEvent,
-      timestamp: Date.now(),
-      date: new Date().toISOString()
-    };
-
-    try {
-      const sessionRef = doc(collection(db, `users/${currentUser.uid}/sessions`));
-      await setDoc(sessionRef, sessionData);
-      await loadRecentSessions();
-    } catch (error) {
-      console.error('儲存失敗:', error);
+  function clearHistory() {
+    if(confirm("確定要刪除此項目的所有紀錄嗎？")) {
+        times = [];
+        localStorage.removeItem(`times_${currentUser}_${currentEvent}`);
+        updateUI();
     }
   }
 
-  // 載入最近成績
-  async function loadRecentSessions() {
-    if (!currentUser) return;
-    
-    try {
-      const q = query(
-        collection(db, `users/${currentUser.uid}/sessions`),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-      
-      const snapshot = await getDocs(q);
-      const sessions = [];
-      
-      snapshot.forEach(doc => {
-        sessions.push(doc.data());
-      });
-      
-      displaySessions(sessions);
-      calculateStats(sessions);
-    } catch (error) {
-      console.error('載入失敗:', error);
-    }
-  }
-
-  function displaySessions(sessions) {
-    if (sessions.length === 0) {
-      recentSessions.innerHTML = '<p class="text-gray-500">尚無成績</p>';
-      return;
-    }
-    
-    recentSessions.innerHTML = sessions.map((s, i) => `
-      <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center">
-        <span class="text-gray-400">#${i + 1}</span>
-        <span class="text-2xl font-bold">${s.time.toFixed(2)}</span>
-        <span class="text-gray-500 text-sm">${new Date(s.timestamp).toLocaleTimeString()}</span>
-      </div>
+  function updateUI() {
+    // 更新最近成績列表
+    const list = document.getElementById('recentSessions');
+    list.innerHTML = times.slice(0, 10).map((t, i) => `
+        <div class="bg-gray-800 p-3 rounded flex justify-between items-center panel">
+            <span class="opacity-40 text-xs">#${times.length - i}</span>
+            <span class="text-xl font-bold">${t.time.toFixed(2)}</span>
+            <span class="opacity-40 text-xs">${t.date}</span>
+        </div>
     `).join('');
-  }
 
-  function calculateStats(sessions) {
-    if (sessions.length === 0) return;
-    
-    const times = sessions.map(s => s.time);
-    const avg = (times.reduce((a, b) => a + b, 0) / times.length).toFixed(2);
-    const best = Math.min(...times).toFixed(2);
-    
-    document.getElementById('avgDisplay').textContent = avg;
-    document.getElementById('bestDisplay').textContent = best;
-    
-    if (times.length >= 5) {
-      const ao5 = calculateAverage(times.slice(0, 5));
-      document.getElementById('ao5Display').textContent = ao5.toFixed(2);
-    }
-    
-    if (times.length >= 12) {
-      const ao12 = calculateAverage(times.slice(0, 12));
-      document.getElementById('ao12Display').textContent = ao12.toFixed(2);
+    // 更新統計資料
+    if (times.length > 0) {
+        const rawTimes = times.map(t => t.time);
+        document.getElementById('bestDisplay').textContent = Math.min(...rawTimes).toFixed(2);
+        document.getElementById('avgDisplay').textContent = (rawTimes.reduce((a,b)=>a+b)/rawTimes.length).toFixed(2);
+        
+        document.getElementById('ao5Display').textContent = calculateAoN(rawTimes, 5);
+        document.getElementById('ao12Display').textContent = calculateAoN(rawTimes, 12);
+    } else {
+        document.getElementById('bestDisplay').textContent = "-.--";
+        document.getElementById('avgDisplay').textContent = "-";
+        document.getElementById('ao5Display').textContent = "-";
+        document.getElementById('ao12Display').textContent = "-";
     }
   }
 
-  function calculateAverage(times) {
-    const sorted = [...times].sort((a, b) => a - b);
-    const trimmed = sorted.slice(1, -1);
-    return trimmed.reduce((a, b) => a + b, 0) / trimmed.length;
+  function calculateAoN(arr, n) {
+    if (arr.length < n) return "-";
+    const sub = arr.slice(0, n).sort((a,b)=>a-b);
+    sub.pop(); // 去掉最慢
+    sub.shift(); // 去掉最快
+    return (sub.reduce((a,b)=>a+b)/sub.length).toFixed(2);
   }
 
-  // 設定面板
-  settingsBtn.addEventListener('click', () => {
-    settingsModal.classList.remove('hidden');
-  });
+  function changeTheme(theme) {
+    document.body.className = `theme-${theme} min-h-screen`;
+  }
 
-  closeSettings.addEventListener('click', () => {
-    settingsModal.classList.add('hidden');
-  });
-
-  eventSelect.addEventListener('change', (e) => {
-    currentEvent = e.target.value;
-    newScramble();
-  });
+  init();
 </script>
-
 </body>
 </html>

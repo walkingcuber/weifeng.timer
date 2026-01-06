@@ -28,8 +28,6 @@
 <div id="authScreen" class="flex items-center justify-center min-h-screen">
   <div class="bg-gray-800 p-8 rounded-xl shadow-2xl max-w-sm w-full">
     <h1 class="text-3xl font-bold text-center mb-6">登入計時器</h1>
-  <h4>如果沒有帳號，請寄信至:</h4>
-  <h3>jses1080058@smail.ilc.edu.tw</h3>
     <input type="email" id="emailInput" placeholder="電子郵件" 
            class="w-full p-4 mb-4 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
     <input type="password" id="passwordInput" placeholder="密碼" 
@@ -40,7 +38,6 @@
     <p id="authError" class="text-red-500 text-sm mt-4 text-center hidden"></p>
   </div>
 </div>
-
 <!-- 主計時器畫面 -->
 <div id="timerScreen" class="hidden">
   <!-- 頂部導航 -->
@@ -137,8 +134,6 @@
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-  // Firebase 配置 - 請替換成你的金鑰
   const firebaseConfig = {
     apiKey: "AIzaSyDI95sVUBAs3iDMQlF115qNxXd-DPkBMbg",
     authDomain: "weifengtimer.firebaseapp.com",
@@ -152,8 +147,6 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-
-  // UI 元素
   const authScreen = document.getElementById('authScreen');
   const timerScreen = document.getElementById('timerScreen');
   const emailInput = document.getElementById('emailInput');
@@ -170,8 +163,6 @@
   const settingsModal = document.getElementById('settingsModal');
   const closeSettings = document.getElementById('closeSettings');
   const eventSelect = document.getElementById('eventSelect');
-
-  // 計時器狀態
   let timerState = 'idle'; // idle, ready, running, stopped
   let startTime = 0;
   let currentTime = 0;
@@ -180,8 +171,6 @@
   let currentUser = null;
   let currentScramble = '';
   let currentEvent = '333';
-
-  // 打亂公式生成器
   const scrambleGenerators = {
     '222': () => generateScramble(['U', 'R', 'F'], 9),
     '333': () => generateScramble(['U', 'D', 'L', 'R', 'F', 'B'], 20),
@@ -191,7 +180,6 @@
     'pyram': () => generateScramble(['U', 'L', 'R', 'B'], 11),
     'skewb': () => generateScramble(['U', 'L', 'R', 'B'], 11)
   };
-
   function generateScramble(moves, length) {
     let scramble = [];
     let lastMove = '';
@@ -224,13 +212,10 @@
     }
     return scramble.join('\n');
   }
-
   function newScramble() {
     currentScramble = scrambleGenerators[currentEvent]();
     scrambleDisplay.textContent = currentScramble;
   }
-
-  // 登入處理
   loginBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
@@ -246,17 +231,12 @@
       showError('登入失敗：' + error.message);
     }
   });
-
   function showError(message) {
     authError.textContent = message;
     authError.classList.remove('hidden');
     setTimeout(() => authError.classList.add('hidden'), 3000);
   }
-
-  // 登出處理
   logoutBtn.addEventListener('click', () => signOut(auth));
-
-  // 監聽認證狀態
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
@@ -271,8 +251,6 @@
       timerScreen.classList.add('hidden');
     }
   });
-
-  // 計時器邏輯
   function updateDisplay() {
     const elapsed = (currentTime - startTime) / 1000;
     timerDisplay.textContent = elapsed.toFixed(2);
@@ -282,7 +260,6 @@
       animationFrame = requestAnimationFrame(updateDisplay);
     }
   }
-
   function startTimer() {
     if (timerState !== 'ready') return;
     
@@ -294,7 +271,6 @@
     timerHint.textContent = '計時中...';
     updateDisplay();
   }
-
   function stopTimer() {
     if (timerState !== 'running') return;
     
@@ -307,7 +283,6 @@
     const finalTime = ((endTime - startTime) / 1000).toFixed(2);
     saveSession(parseFloat(finalTime));
   }
-
   function resetTimer() {
     timerState = 'idle';
     timerDisplay.textContent = '0.00';
@@ -315,12 +290,9 @@
     timerHint.textContent = '按住空白鍵開始';
     newScramble();
   }
-
-  // 鍵盤事件
   document.addEventListener('keydown', (e) => {
     if (e.code !== 'Space' || !currentUser) return;
-    e.preventDefault();
-    
+    e.preventDefault();    
     if (timerState === 'idle') {
       holdTimer = setTimeout(() => {
         timerState = 'ready';
@@ -331,29 +303,22 @@
       stopTimer();
     }
   });
-
   document.addEventListener('keyup', (e) => {
     if (e.code !== 'Space' || !currentUser) return;
     e.preventDefault();
-    
     if (holdTimer) {
       clearTimeout(holdTimer);
       holdTimer = null;
     }
-    
     if (timerState === 'ready') {
       startTimer();
     } else if (timerState === 'stopped') {
       resetTimer();
     } else if (timerState === 'idle' && holdTimer === null) {
-      // 防止誤觸
     }
   });
-
-  // 儲存成績
   async function saveSession(time) {
     if (!currentUser) return;
-    
     const sessionData = {
       time: time,
       scramble: currentScramble,
@@ -361,7 +326,6 @@
       timestamp: Date.now(),
       date: new Date().toISOString()
     };
-
     try {
       const sessionRef = doc(collection(db, `users/${currentUser.uid}/sessions`));
       await setDoc(sessionRef, sessionData);
@@ -370,8 +334,6 @@
       console.error('儲存失敗:', error);
     }
   }
-
-  // 載入最近成績
   async function loadRecentSessions() {
     if (!currentUser) return;
     
@@ -381,27 +343,23 @@
         orderBy('timestamp', 'desc'),
         limit(10)
       );
-      
       const snapshot = await getDocs(q);
       const sessions = [];
       
       snapshot.forEach(doc => {
         sessions.push(doc.data());
       });
-      
       displaySessions(sessions);
       calculateStats(sessions);
     } catch (error) {
       console.error('載入失敗:', error);
     }
   }
-
   function displaySessions(sessions) {
     if (sessions.length === 0) {
       recentSessions.innerHTML = '<p class="text-gray-500">尚無成績</p>';
       return;
     }
-    
     recentSessions.innerHTML = sessions.map((s, i) => `
       <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center">
         <span class="text-gray-400">#${i + 1}</span>
